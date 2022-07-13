@@ -10,7 +10,7 @@ class Server:
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.host = "localhost"
-        self.port = 8000
+        self.port = 8080
         self.addr = (self.host, self.port)
         self.sock.bind(self.addr)
         self.sock.listen(10)
@@ -21,12 +21,14 @@ class Server:
             try:
                 data = client_socket.recv(1024)
                 if data.decode() == "q":
+                    print(f"{self.client_list[client_socket]} has left the server")
                     del self.client_list[client_socket]
                     client_socket.close()
                     return
                 self.broadcast(data, self.client_list[client_socket])
 
             except Exception as e:
+                print(f"{self.client_list[client_socket]} has left the server")
                 del self.client_list[client_socket]
                 client_socket.close()
                 return
@@ -36,6 +38,7 @@ class Server:
         self=None, sig=None, frame=None
     ):  # self is none because I don't know the proper way to handle this with atexit
         for connection in list(self.client_list):
+
             connection.sendall("Server shutting down!".encode())
             connection.close()
 
