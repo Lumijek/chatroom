@@ -1,16 +1,15 @@
 import socket
 import threading
-import sys
 import signal
-import atexit
 import os
 
 
 class Server:
     def __init__(self):
+        self.event = threading.Event()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.host = "localhost"
-        self.port = 8080
+        self.port = 8001
         self.addr = (self.host, self.port)
         self.sock.bind(self.addr)
         self.sock.listen(10)
@@ -28,20 +27,15 @@ class Server:
                 self.broadcast(data, self.client_list[client_socket])
 
             except Exception as e:
-                print(f"{self.client_list[client_socket]} has left the server")
                 del self.client_list[client_socket]
                 client_socket.close()
                 return
 
-    @atexit.register
-    def shut_down_server(
-        self=None, sig=None, frame=None
-    ):  # self is none because I don't know the proper way to handle this with atexit
+    def shut_down_server(self, sig, frame):
         for connection in list(self.client_list):
-
             connection.sendall("Server shutting down!".encode())
             connection.close()
-
+        self.event.set()
         os._exit(1)
 
     def broadcast(self, message, client_name):
@@ -50,6 +44,7 @@ class Server:
 
     def start(self):
         signal.signal(signal.SIGINT, self.shut_down_server)
+        signal.signal(signal.SIGHUP, self.shut_down_server)
         while True:
             client_socket, addr = self.sock.accept()
             name = client_socket.recv(128).decode()

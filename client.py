@@ -2,13 +2,15 @@ import socket
 import threading
 import sys
 import os
+import signal
 
 
 class Client:
     def __init__(self):
+        self.event = threading.Event()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.host = "localhost"
-        self.port = 8080
+        self.port = 8001
         self.addr = (self.host, self.port)
 
     def send(self):
@@ -38,10 +40,19 @@ class Client:
                 os._exit(1)
                 return
 
+    def kill_client(self, sig, frame):
+        self.sock.sendall("q".encode())
+        self.sock.close()
+        self.event.set()
+        os._exit()
+
     def start(self):
+
         name = sys.argv[1]
         self.sock.connect(self.addr)
         self.sock.sendall(name.encode())
+        signal.signal(signal.SIGINT, self.kill_client)
+        signal.signal(signal.SIGHUP, self.kill_client)
         send_msg = threading.Thread(target=self.send)
         recv_msg = threading.Thread(target=self.recv)
         send_msg.start()
